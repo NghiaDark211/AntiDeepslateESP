@@ -1,26 +1,27 @@
 package me.nghiadark.antideepslateesp.protocol;
 
 import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.wrappers.ChunkCoordIntPair;
-import com.comphenix.protocol.wrappers.MultiBlockChangeInfo;
+import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.WrappedBlockData;
 import me.nghiadark.antideepslateesp.AntiDeepslateESP;
 import me.nghiadark.antideepslateesp.config.ConfigManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class ChunkPacketAdapter extends PacketAdapter {
 
+    private static final int BATCH_SIZE = 100;
     private final AntiDeepslateESP plugin;
     private final ConfigManager config;
 
@@ -40,12 +41,12 @@ public class ChunkPacketAdapter extends PacketAdapter {
             final int chunkZ = event.getPacket().getIntegers().read(1);
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                hideChunkDeepslate(player, chunkX, chunkZ);
+                hideDeepslateBlocks(player, chunkX, chunkZ);
             });
         }
     }
 
-    private void hideChunkDeepslate(Player player, int chunkX, int chunkZ) {
+    private void hideDeepslateBlocks(Player player, int chunkX, int chunkZ) {
         World world = player.getWorld();
         if (!world.isChunkLoaded(chunkX, chunkZ)) return;
 
@@ -54,47 +55,42 @@ public class ChunkPacketAdapter extends PacketAdapter {
         int worldMinY = world.getMinHeight();
         int worldMaxY = world.getMaxHeight();
 
-        // Group blocks by chunk section (16-block vertical slices)
-        Map<Integer, List<MultiBlockChangeInfo>> sectionChanges = new HashMap<>();
+        List<Location> blocks = new ArrayList<>();
 
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 for (int y = worldMinY; y <= hideBelow && y < worldMaxY; y++) {
                     if (chunk.getBlock(x, y, z).getType().isAir()) continue;
-
-                    int sectionY = y >> 4;
-                    int sectionIndex = sectionY - (worldMinY >> 4);
-
-                    short relPos = (short)((x << 8) | (z << 4) | (y & 0xF));
-
-                    sectionChanges
-                        .computeIfAbsent(sectionIndex, k -> new ArrayList<>())
-                        .add(new MultiBlockChangeInfo(
-                            relPos,
-                            WrappedBlockData.createData(Material.AIR),
-                            new ChunkCoordIntPair(chunkX, chunkZ)
-                        ));
+                    blocks.add(new Location(world, chunkX * 16 + x, y, chunkZ * 16 + z));
                 }
             }
         }
 
-        if (sectionChanges.isEmpty()) return;
+        if (blocks.isEmpty()) return;
 
-        for (Map.Entry<Integer, List<MultiBlockChangeInfo>> entry : sectionChanges.entrySet()) {
-            int sectionIndex = entry.getKey();
-            List<MultiBlockChangeInfo> changes = entry.getValue();
+        processBatch(player, blocks, 0);
+    }
 
-            int sectionY = sectionIndex + (worldMinY >> 4);
-
-            long sectionPos = encodeSectionPosition(chunkX, sectionY, chunkZ);
-
-            PluginUtils.sendSectionBlocksUpdate(player, sectionPos, changes);
+    private void processBatch(Player player, List<Location> blocks, int index) {
+        int end = Math.min(index + BATCH_SIZE, blocks.size());
+        for (int i = index; i < end; i++) {
+            Location loc = blocks.get(i);
+            sendBlockChange(player, loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(), Material.AIR);
+        }
+        if (end < blocks.size()) {
+            int nextIndex = end;
+            Bukkit.getScheduler().runTask(plugin, () -> processBatch(player, blocks, nextIndex));
         }
     }
 
-    private long encodeSectionPosition(int x, int y, int z) {
-        return ((long) x & 0x3FFFFFL) << 42
-             | ((long) y & 0xFFFFFL)
-             | ((long) z & 0x3FFFFFL) << 20;
+    private void sendBlockChange(Player player, int x, int y, int z, Material material) {
+        PacketContainer packet = new PacketContainer(PacketType.Play.Server.BLOCK_CHANGE);
+        packet.getBlockPositionModifier().write(0, new BlockPosition(x, y, z));
+        packet.getBlockData().write(0, WrappedBlockData.createData(material));
+        try {
+            ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
+        } catch (Exception e) {
+            plugin.debug("Failed to send block change: " + e.getMessage());
+        }
     }
 }
