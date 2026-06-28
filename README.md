@@ -59,7 +59,7 @@ auto-commands:
     - "title %player% subtitle {\"text\":\"§7Deepslate sections visible\"}"
 
 update-checker: true
-github-repo: nghiadark/AntiDeepslateESP
+github-repo: NghiaDark211/AntiDeepslateESP
 ```
 
 ## Building from source

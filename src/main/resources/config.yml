@@ -21,4 +21,4 @@ auto-commands:
 update-checker: true
 
 # GitHub repository for update checking (format: owner/repo)
-github-repo: nghiadark/AntiDeepslateESP
+github-repo: NghiaDark211/AntiDeepslateESP
