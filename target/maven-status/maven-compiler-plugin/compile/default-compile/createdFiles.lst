@@ -1,0 +1,7 @@
+me\nghiadark\antideepslateesp\listener\PlayerListener.class
+me\nghiadark\antideepslateesp\AntiDeepslateESP.class
+me\nghiadark\antideepslateesp\protocol\ChunkPacketAdapter.class
+me\nghiadark\antideepslateesp\config\ConfigManager.class
+me\nghiadark\antideepslateesp\update\UpdateChecker.class
+me\nghiadark\antideepslateesp\command\ReloadCommand.class
+me\nghiadark\antideepslateesp\protocol\PluginUtils.class

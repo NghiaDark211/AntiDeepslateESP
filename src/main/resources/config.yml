@@ -1,0 +1,24 @@
+# AntiDeepslateESP Configuration
+# Author: nghiadark
+
+# The Y threshold: when player Y > this value, deepslate sections (<= hide-below-y) will be hidden
+threshold-y: 6
+
+# The Y level below which sections will be hidden when player is above threshold
+hide-below-y: 0
+
+# Auto-commands executed when player crosses the threshold
+# Available placeholders: %player%, %world%, %x%, %y%, %z%
+auto-commands:
+  surface:
+    - "title %player% title {\"text\":\"§cAnti-ESP Active\",\"bold\":true}"
+    - "title %player% subtitle {\"text\":\"§7Deepslate sections hidden\"}"
+  mining:
+    - "title %player% title {\"text\":\"§aMining Mode\",\"bold\":true}"
+    - "title %player% subtitle {\"text\":\"§7Deepslate sections visible\"}"
+
+# Update checker (checks GitHub releases)
+update-checker: true
+
+# GitHub repository for update checking (format: owner/repo)
+github-repo: nghiadark/AntiDeepslateESP
